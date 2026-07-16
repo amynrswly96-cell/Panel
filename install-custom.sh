@@ -17,7 +17,7 @@ plain='\033[0m'
 [[ $EUID -ne 0 ]] && echo -e "${red}Please run this script as root (sudo).${plain}" && exit 1
 
 # ====== EDIT THESE TWO LINES ======
-REPO_URL="https://github.com/YOUR_USERNAME/YOUR_REPO.git"
+REPO_URL="https://github.com/amynrswly96-cell/Panel.git"
 BRANCH="main"
 # ===================================
 
