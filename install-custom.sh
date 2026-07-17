@@ -28,9 +28,9 @@ BUILD_DIR="/tmp/x-ui-build-$$"
 echo -e "${green}[1/6] Installing build dependencies...${plain}"
 if command -v apt-get >/dev/null 2>&1; then
     apt-get update -y
-    apt-get install -y git curl build-essential
+    apt-get install -y git curl unzip build-essential
 elif command -v yum >/dev/null 2>&1; then
-    yum install -y git curl gcc make
+    yum install -y git curl unzip gcc make
 else
     echo -e "${red}Unsupported package manager. Install git, curl and a C compiler manually, then re-run.${plain}"
     exit 1
@@ -81,10 +81,36 @@ npm run build
 cd ..
 go build -o x-ui main.go
 
+echo -e "${green}[5b/6] Downloading Xray-core + geo data into bin/...${plain}"
+XRAY_VERSION="v26.7.11"
+ARCH=$(uname -m)
+case "$ARCH" in
+    x86_64) XRAY_ASSET="Xray-linux-64.zip"; XRAY_ARCH_SUFFIX="amd64" ;;
+    aarch64|arm64) XRAY_ASSET="Xray-linux-arm64-v8a.zip"; XRAY_ARCH_SUFFIX="arm64" ;;
+    *) echo -e "${red}Unsupported arch for Xray-core: $ARCH${plain}"; exit 1 ;;
+esac
+
+mkdir -p bin
+XRAY_TMP="/tmp/xray-dl-$$"
+mkdir -p "$XRAY_TMP"
+curl -Ls -o "$XRAY_TMP/xray.zip" "https://github.com/XTLS/Xray-core/releases/download/${XRAY_VERSION}/${XRAY_ASSET}"
+unzip -q -o "$XRAY_TMP/xray.zip" -d "$XRAY_TMP"
+mv "$XRAY_TMP/xray" "bin/xray-linux-${XRAY_ARCH_SUFFIX}"
+chmod +x "bin/xray-linux-${XRAY_ARCH_SUFFIX}"
+
+curl -Ls -o bin/geoip.dat https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geoip.dat
+curl -Ls -o bin/geosite.dat https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geosite.dat
+curl -Ls -o bin/geoip_IR.dat https://github.com/chocolate4u/Iran-v2ray-rules/releases/latest/download/geoip.dat
+curl -Ls -o bin/geosite_IR.dat https://github.com/chocolate4u/Iran-v2ray-rules/releases/latest/download/geosite.dat
+curl -Ls -o bin/geoip_RU.dat https://github.com/runetfreedom/russia-v2ray-rules-dat/releases/latest/download/geoip.dat
+curl -Ls -o bin/geosite_RU.dat https://github.com/runetfreedom/russia-v2ray-rules-dat/releases/latest/download/geosite.dat
+rm -rf "$XRAY_TMP"
+
 echo -e "${green}[6/6] Installing to $INSTALL_DIR and setting up the service...${plain}"
 systemctl stop x-ui 2>/dev/null || true
 mkdir -p "$INSTALL_DIR"
 cp x-ui "$INSTALL_DIR/x-ui"
+cp -r bin "$INSTALL_DIR/bin"
 cp -r internal/web/dist "$INSTALL_DIR/dist" 2>/dev/null || true
 [[ -f x-ui.sh ]] && cp x-ui.sh /usr/bin/x-ui && chmod +x /usr/bin/x-ui
 chmod +x "$INSTALL_DIR/x-ui"
